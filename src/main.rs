@@ -114,11 +114,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState { pool, tera };
 
     let app = Router::new()
-        // Public Website Homepage & News Feed
         .route("/", get(public_website_handler))
         .route("/category/:name", get(public_category_handler))
         .route("/search", get(public_search_handler))
-        // Admin & Publishing Portals
         .route("/admin/dashboard", get(admin_dashboard_handler))
         .route("/admin/editor", get(editor_portal_handler))
         .route("/admin/reporter", get(reporter_portal_handler))
@@ -142,7 +140,6 @@ fn get_categories() -> Vec<&'static str> {
     ]
 }
 
-// Public Main Website Handler
 async fn public_website_handler(State(state): State<AppState>) -> impl IntoResponse {
     let articles = sqlx::query_as::<_, Article>("SELECT id, title, category, content, author_role FROM articles ORDER BY id DESC")
         .fetch_all(&state.pool)
@@ -152,6 +149,8 @@ async fn public_website_handler(State(state): State<AppState>) -> impl IntoRespo
     let mut ctx = tera::Context::new();
     ctx.insert("categories", &get_categories());
     ctx.insert("articles", &articles);
+    ctx.insert("active_category", "");
+    ctx.insert("search_term", "");
 
     match state.tera.render("index.html", &ctx) {
         Ok(rendered) => Html(rendered).into_response(),
@@ -159,7 +158,6 @@ async fn public_website_handler(State(state): State<AppState>) -> impl IntoRespo
     }
 }
 
-// Category Filter Handler
 async fn public_category_handler(
     State(state): State<AppState>,
     Path(category): Path<String>,
@@ -173,6 +171,7 @@ async fn public_category_handler(
     let mut ctx = tera::Context::new();
     ctx.insert("categories", &get_categories());
     ctx.insert("active_category", &category);
+    ctx.insert("search_term", "");
     ctx.insert("articles", &articles);
 
     match state.tera.render("index.html", &ctx) {
@@ -181,7 +180,6 @@ async fn public_category_handler(
     }
 }
 
-// Public Search Handler
 async fn public_search_handler(
     State(state): State<AppState>,
     Query(query): Query<SearchQuery>,
@@ -201,6 +199,7 @@ async fn public_search_handler(
     let mut ctx = tera::Context::new();
     ctx.insert("categories", &get_categories());
     ctx.insert("search_term", &search_term);
+    ctx.insert("active_category", "");
     ctx.insert("articles", &articles);
 
     match state.tera.render("index.html", &ctx) {
@@ -209,7 +208,6 @@ async fn public_search_handler(
     }
 }
 
-// Super Admin Portal Handler
 async fn admin_dashboard_handler(
     State(state): State<AppState>,
     Query(params): Query<AuthQuery>,
@@ -240,7 +238,6 @@ async fn admin_dashboard_handler(
     }
 }
 
-// Editor Portal Handler
 async fn editor_portal_handler(
     State(state): State<AppState>,
     Query(params): Query<AuthQuery>,
@@ -263,7 +260,6 @@ async fn editor_portal_handler(
     }
 }
 
-// Reporter Portal Handler
 async fn reporter_portal_handler(
     State(state): State<AppState>,
     Query(params): Query<AuthQuery>,

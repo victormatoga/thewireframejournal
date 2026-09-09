@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -16,7 +16,14 @@
         .nav-item:hover, .nav-item.active { background-color: #334155; color: #fff; }
         .badge { background: #ef4444; color: #fff; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
         .main-content { flex: 1; padding: 30px; background: #0f172a; overflow-y: auto; }
+        
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: #1e293b; padding: 15px 20px; border-radius: 8px; }
+        
+        /* Admin Search Bar with WJ Logo */
+        .admin-search-box { display: flex; align-items: center; background: #0f172a; border: 1px solid #334155; border-radius: 20px; padding: 4px 12px; }
+        .admin-search-box .wj-badge { background: #0284c7; color: #fff; font-weight: bold; font-size: 0.75rem; padding: 3px 6px; border-radius: 4px; margin-right: 8px; }
+        .admin-search-box input { background: transparent; border: none; color: #fff; outline: none; font-size: 0.9rem; width: 220px; }
+
         .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .card { background: #1e293b; padding: 20px; border-radius: 8px; }
         .card .value { font-size: 1.6rem; font-weight: bold; color: #38bdf8; margin-top: 5px; }
@@ -28,6 +35,9 @@
         .btn-primary { background: #0284c7; color: #fff; }
         .btn-danger { background: #dc2626; color: #fff; }
         .form-control { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #fff; margin-bottom: 15px; }
+        .guide-box { background: #0f172a; border-left: 4px solid #0284c7; padding: 15px; border-radius: 4px; margin-top: 15px; }
+        .guide-box h4 { color: #38bdf8; margin-bottom: 5px; }
+        .guide-box p { color: #94a3b8; font-size: 0.9rem; line-height: 1.4; }
     </style>
 </head>
 <body>
@@ -41,28 +51,26 @@
         <div class="nav-group">
             <h3>Overview</h3>
             <a href="/admin/dashboard" class="nav-item active">Dashboard & Analytics</a>
-            <a href="#articles" class="nav-item">Manage Articles & Posts</a>
-            <a href="/" target="_blank" class="nav-item">View Public Website ↗</a>
+            <a href="#roles-guide" class="nav-item">Role Setup Guide</a>
+            <a href="#articles" class="nav-item">Manage Articles</a>
+            <a href="/" target="_blank" class="nav-item">View Website ↗</a>
         </div>
 
         <div class="nav-group">
-            <h3>User Roles & Governance</h3>
+            <h3>User Portals</h3>
             <a href="/admin/dashboard" class="nav-item">Super Admin <span class="badge">Full Access</span></a>
             <a href="/admin/editor" class="nav-item">Editors Portal</a>
             <a href="/admin/reporter" class="nav-item">Reporters Portal</a>
-        </div>
-
-        <div class="nav-group">
-            <h3>Revenue & Security</h3>
-            <a href="#monetization" class="nav-item">Monetization & Ads</a>
-            <a href="#security" class="nav-item">Security & Privacy</a>
         </div>
     </div>
 
     <div class="main-content">
         <header>
             <h2>Super Admin Portal</h2>
-            <a href="/admin/dashboard" class="btn btn-primary">Refresh</a>
+            <form action="/search" method="GET" class="admin-search-box">
+                <span class="wj-badge">WJ</span>
+                <input type="text" name="q" placeholder="Admin Article Search...">
+            </form>
         </header>
 
         {% if msg %}<div style="background:#15803d; padding:10px; border-radius:6px; margin-bottom:15px;">{{ msg }}</div>{% endif %}
@@ -74,8 +82,29 @@
             <div class="card"><div>Ad Clicks</div><div class="value">{{ metrics.total_clicks }}</div></div>
         </div>
 
+        <!-- Role Setup & Workflow Instructions -->
+        <div class="section-card" id="roles-guide">
+            <h3>Editor & Reporter Management Setup</h3>
+            <p style="color:#cbd5e1; margin-top:5px;">How role permissions and content workflows operate on this platform:</p>
+            
+            <div class="guide-box">
+                <h4>1. Reporter Role (Draft & Submission)</h4>
+                <p>Reporters draft stories and submit them through <code>/admin/reporter</code>. Submissions carry the <code>reporter</code> author level and remain pending review. Reporters cannot delete or modify published articles.</p>
+            </div>
+
+            <div class="guide-box" style="border-left-color: #eab308;">
+                <h4>2. Editor Role (Review & Direct Publishing)</h4>
+                <p>Editors access <code>/admin/editor</code> to review pending reporter drafts, make revisions, and publish directly to website categories. Editors can delete inappropriate posts.</p>
+            </div>
+
+            <div class="guide-box" style="border-left-color: #ef4444;">
+                <h4>3. Super Admin Role (Governance & Security)</h4>
+                <p>Super Admins have unrestricted site access to manage articles across all roles, monitor ad performance, and update database master credentials.</p>
+            </div>
+        </div>
+
         <div class="section-card" id="articles">
-            <h3>Publish Article (Super Admin)</h3>
+            <h3>Publish Article (Super Admin Override)</h3>
             <form action="/admin/articles/create" method="POST" style="margin-top:15px;">
                 <input type="hidden" name="role" value="super_admin">
                 <input type="text" name="title" placeholder="Article Title" class="form-control" required>
@@ -85,7 +114,7 @@
                     {% endfor %}
                 </select>
                 <textarea name="content" placeholder="Content body..." class="form-control" rows="4" required></textarea>
-                <button type="submit" class="btn btn-primary">Publish to Website</button>
+                <button type="submit" class="btn btn-primary">Publish to Public Site</button>
             </form>
         </div>
 
@@ -93,7 +122,7 @@
             <h3>All Managed Articles</h3>
             <table>
                 <thead>
-                    <tr><th>ID</th><th>Title</th><th>Category</th><th>Author Level</th><th>Action</th></tr>
+                    <tr><th>ID</th><th>Title</th><th>Category</th><th>Author Role</th><th>Action</th></tr>
                 </thead>
                 <tbody>
                     {% for article in articles %}
@@ -111,19 +140,10 @@
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="5">No articles found.</td></tr>
+                    <tr><td colspan="5">No articles recorded in database.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
-        </div>
-
-        <div class="section-card" id="security">
-            <h3>Super Admin Security Credentials</h3>
-            <form action="/admin/change-password" method="POST" style="max-width:400px; margin-top:15px;">
-                <input type="password" name="current_password" placeholder="Current Super Admin Password" class="form-control" required>
-                <input type="password" name="new_password" placeholder="New Password" class="form-control" required>
-                <button type="submit" class="btn btn-primary">Update Admin Password</button>
-            </form>
         </div>
     </div>
 

@@ -13,7 +13,7 @@
         .logo-box { background: #0284c7; color: #fff; font-weight: bold; padding: 8px 12px; border-radius: 6px; font-size: 1.2rem; }
         .site-title { font-size: 1.8rem; font-weight: bold; color: #f8fafc; }
         .search-box { display: flex; align-items: center; background: #0f172a; border: 1px solid #334155; border-radius: 20px; padding: 6px 14px; }
-        .search-box input { background: transparent; border: none; color: #fff; outline: none; font-size: 0.9rem; width: 180px; }
+        .search-box input { background: transparent; border: none; color: #fff; outline: none; font-size: 0.9rem; width: 200px; }
 
         nav { background: #1e293b; padding: 12px 40px; border-bottom: 1px solid #334155; overflow-x: auto; white-space: nowrap; }
         .nav-container { max-width: 1200px; margin: 0 auto; display: flex; gap: 15px; }
@@ -26,7 +26,6 @@
         .category { color: #38bdf8; font-size: 0.75rem; text-transform: uppercase; font-weight: bold; margin-bottom: 8px; }
         .card h3 { font-size: 1.2rem; margin-bottom: 10px; color: #fff; }
         .card p { color: #94a3b8; font-size: 0.9rem; line-height: 1.5; }
-        .portal-link { display: inline-block; margin-top: 20px; color: #38bdf8; text-decoration: none; font-size: 0.9rem; }
     </style>
 </head>
 <body>
@@ -38,14 +37,14 @@
                 <h1 class="site-title">The WireFrame Journal</h1>
             </a>
             <form action="/search" method="GET" class="search-box">
-                <input type="text" name="q" placeholder="Search news..." value="{{ search_term | default(value='') }}">
+                <input type="text" name="q" placeholder="Search news stories..." value="{% if search_term %}{{ search_term }}{% endif %}">
             </form>
         </div>
     </header>
 
     <nav>
         <div class="nav-container">
-            <a href="/" class="{% if not active_category %}active{% endif %}">All News</a>
+            <a href="/" class="{% if not active_category or active_category == '' %}active{% endif %}">All News</a>
             {% for cat in categories %}
             <a href="/category/{{ cat }}" class="{% if active_category == cat %}active{% endif %}">{{ cat }}</a>
             {% endfor %}
@@ -53,9 +52,9 @@
     </nav>
 
     <div class="container">
-        {% if active_category %}
+        {% if active_category and active_category != "" %}
             <h2>Category: {{ active_category | capitalize }}</h2>
-        {% elif search_term %}
+        {% elif search_term and search_term != "" %}
             <h2>Search Results for "{{ search_term }}"</h2>
         {% else %}
             <h2>Latest News Stories</h2>
@@ -69,14 +68,8 @@
                 <p>{{ article.content }}</p>
             </div>
             {% else %}
-            <p>No published news found in this category.</p>
+            <p>No published news found in this section.</p>
             {% endfor %}
-        </div>
-
-        <div style="margin-top: 40px; border-top: 1px solid #334155; padding-top: 20px;">
-            <a href="/admin/dashboard" class="portal-link">→ Access Super Admin Portal</a> | 
-            <a href="/admin/editor" class="portal-link">→ Access Editor Portal</a> | 
-            <a href="/admin/reporter" class="portal-link">→ Access Reporter Portal</a>
         </div>
     </div>
 
