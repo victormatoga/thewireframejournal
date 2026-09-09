@@ -28,11 +28,23 @@ pub struct DashboardMetrics {
 }
 
 #[derive(Serialize, sqlx::FromRow)]
-pub struct Subscriber {
+pub struct Article {
     pub id: i64,
-    pub email: String,
-    pub status: Option<String>,
-    pub subscribed_at: Option<String>,
+    pub title: String,
+    pub category: String,
+    pub content: String,
+}
+
+#[derive(Deserialize)]
+pub struct CreateArticleForm {
+    pub title: String,
+    pub category: String,
+    pub content: String,
+}
+
+#[derive(Deserialize)]
+pub struct DeleteArticleForm {
+    pub id: i64,
 }
 
 #[derive(Deserialize)]
@@ -49,16 +61,26 @@ pub struct DashboardQuery {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Database Connection Setup
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:news.db?mode=rwc".to_string());
     let pool = SqlitePool::connect(&database_url).await?;
 
-    // Execute Schema Setup
-    let schema = std::fs::read_to_string("init_db.sql")
-        .unwrap_or_else(|_| include_str!("../init_db.sql").to_string());
-    sqlx::query(&schema).execute(&pool).await?;
+    // Execute SQL Table Initialization
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS articles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            category TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS admins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL
+        );"
+    ).execute(&pool).await?;
 
-    // Seed default admin user if missing (default: admin / adminpassword)
+    // Seed default admin user
     let admin_exists: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM admins")
         .fetch_one(&pool)
         .await
@@ -78,26 +100,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await?;
     }
 
-    // Initialize Tera Templates
     let tera = Tera::new("templates/**/*")?;
     let state = AppState { pool, tera };
 
-    // Application Routes (Added "/" root redirect to dashboard)
     let app = Router::new()
         .route("/", get(|| async { Redirect::to("/admin/dashboard") }))
         .route("/admin/dashboard", get(admin_dashboard_handler))
+        .route("/admin/articles/create", post(create_article_handler))
+        .route("/admin/articles/delete", post(delete_article_handler))
         .route("/admin/change-password", post(change_admin_password_handler))
         .with_state(state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 10000));
-    println!("Server live on http://{}", addr);
+    println!("The Wireframe Journal active on http://{}", addr);
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
 
     Ok(())
 }
 
-// Handler: Render Admin Dashboard
 async fn admin_dashboard_handler(
     State(state): State<AppState>,
     Query(params): Query<DashboardQuery>,
@@ -129,16 +150,14 @@ async fn admin_dashboard_handler(
         total_clicks: clicks.unwrap_or(0),
     };
 
-    let subscribers = sqlx::query_as::<_, Subscriber>(
-        "SELECT id, email, status, datetime(subscribed_at) as subscribed_at FROM subscribers ORDER BY id DESC LIMIT 10"
-    )
-    .fetch_all(&state.pool)
-    .await
-    .unwrap_or_default();
+    let articles = sqlx::query_as::<_, Article>("SELECT id, title, category, content FROM articles ORDER BY id DESC")
+        .fetch_all(&state.pool)
+        .await
+        .unwrap_or_default();
 
     let mut ctx = tera::Context::new();
     ctx.insert("metrics", &metrics);
-    ctx.insert("subscribers", &subscribers);
+    ctx.insert("articles", &articles);
     if let Some(m) = params.msg { ctx.insert("msg", &m); }
     if let Some(e) = params.error { ctx.insert("error", &e); }
 
@@ -152,7 +171,38 @@ async fn admin_dashboard_handler(
     }
 }
 
-// Handler: Update Admin Password with Argon2
+async fn create_article_handler(
+    State(state): State<AppState>,
+    Form(form): Form<CreateArticleForm>,
+) -> impl IntoResponse {
+    let result = sqlx::query("INSERT INTO articles (title, category, content) VALUES ($1, $2, $3)")
+        .bind(&form.title)
+        .bind(&form.category)
+        .bind(&form.content)
+        .execute(&state.pool)
+        .await;
+
+    match result {
+        Ok(_) => Redirect::to("/admin/dashboard?msg=Article+published+successfully!"),
+        Err(_) => Redirect::to("/admin/dashboard?error=Failed+to+publish+article"),
+    }
+}
+
+async fn delete_article_handler(
+    State(state): State<AppState>,
+    Form(form): Form<DeleteArticleForm>,
+) -> impl IntoResponse {
+    let result = sqlx::query("DELETE FROM articles WHERE id = $1")
+        .bind(form.id)
+        .execute(&state.pool)
+        .await;
+
+    match result {
+        Ok(_) => Redirect::to("/admin/dashboard?msg=Article+deleted+successfully!"),
+        Err(_) => Redirect::to("/admin/dashboard?error=Failed+to+delete+article"),
+    }
+}
+
 async fn change_admin_password_handler(
     State(state): State<AppState>,
     Form(form): Form<PasswordChangeForm>,
