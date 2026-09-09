@@ -82,8 +82,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tera = Tera::new("templates/**/*")?;
     let state = AppState { pool, tera };
 
-    // Application Routes
+    // Application Routes (Added "/" root redirect to dashboard)
     let app = Router::new()
+        .route("/", get(|| async { Redirect::to("/admin/dashboard") }))
         .route("/admin/dashboard", get(admin_dashboard_handler))
         .route("/admin/change-password", post(change_admin_password_handler))
         .with_state(state);
@@ -156,7 +157,6 @@ async fn change_admin_password_handler(
     State(state): State<AppState>,
     Form(form): Form<PasswordChangeForm>,
 ) -> impl IntoResponse {
-    // 1. Fetch current admin row from database using runtime query
     let admin_row = match sqlx::query("SELECT id, password_hash FROM admins WHERE username = $1")
         .bind("admin")
         .fetch_one(&state.pool)
@@ -169,7 +169,6 @@ async fn change_admin_password_handler(
     let admin_id: i64 = admin_row.get("id");
     let stored_hash: String = admin_row.get("password_hash");
 
-    // 2. Parse current stored hash and verify current password
     let parsed_hash = match PasswordHash::new(&stored_hash) {
         Ok(hash) => hash,
         Err(_) => return Redirect::to("/admin/dashboard?error=Invalid+stored+password+hash"),
@@ -182,14 +181,12 @@ async fn change_admin_password_handler(
         return Redirect::to("/admin/dashboard?error=Incorrect+current+password");
     }
 
-    // 3. Hash the new password with Argon2
     let salt = SaltString::generate(&mut OsRng);
     let new_hash = match Argon2::default().hash_password(form.new_password.as_bytes(), &salt) {
         Ok(h) => h.to_string(),
         Err(_) => return Redirect::to("/admin/dashboard?error=Failed+to+hash+new+password"),
     };
 
-    // 4. Store updated hash into SQLite
     if sqlx::query("UPDATE admins SET password_hash = $1 WHERE id = $2")
         .bind(new_hash)
         .bind(admin_id)
