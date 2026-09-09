@@ -1,0 +1,16 @@
+[package]
+name = "news_platform_rust"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "news_platform_rust"
+path = "src/main.rs"
+
+[dependencies]
+axum = { version = "0.7", features = ["multipart"] }
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+tera = "1.19"
+tower-http = { version = "0.5", features = ["fs"] }
+uuid = { version = "1.6", features = ["v4"] }
