@@ -160,7 +160,7 @@ async fn is_authenticated(session: &Session) -> bool {
     session.get::<String>("admin_user").await.unwrap_or(None).is_some()
 }
 
-async fn save_file_to_storage(name: &str, field: axum::extract::multipart::Field<'_>) -> Option<String> {
+async fn save_file_to_storage(_name: &str, field: axum::extract::multipart::Field<'_>) -> Option<String> {
     let file_name = field.file_name().map(|s| s.to_string())?;
     if file_name.trim().is_empty() {
         return None;
@@ -175,8 +175,8 @@ async fn save_file_to_storage(name: &str, field: axum::extract::multipart::Field
     let save_path = format!("uploads/{}", new_filename);
 
     if let Ok(bytes) = field.bytes().await {
-        if !bytes.is_empty() && tokio::fs::write(&save_path, bytes).await.is_ok() {
-            // If Cloudinary environment variables are configured, upload to Cloud Storage
+        if !bytes.is_empty() && tokio::fs::write(&save_path, &bytes).await.is_ok() {
+            // Optional Cloudinary upload pipeline
             if let (Ok(cloud_name), Ok(upload_preset)) = (
                 std::env::var("CLOUDINARY_CLOUD_NAME"),
                 std::env::var("CLOUDINARY_UPLOAD_PRESET"),
@@ -184,17 +184,17 @@ async fn save_file_to_storage(name: &str, field: axum::extract::multipart::Field
                 let client = reqwest::Client::new();
                 let upload_url = format!("https://api.cloudinary.com/v1_1/{}/auto/upload", cloud_name);
                 
+                let part = reqwest::multipart::Part::bytes(bytes.to_vec())
+                    .file_name(new_filename.clone());
+
                 let form = reqwest::multipart::Form::new()
                     .text("upload_preset", upload_preset)
-                    .file("file", &save_path)
-                    .await;
+                    .part("file", part);
 
-                if let Ok(form_data) = form {
-                    if let Ok(res) = client.post(&upload_url).multipart(form_data).send().await {
-                        if let Ok(json) = res.json::<serde_json::Value>().await {
-                            if let Some(secure_url) = json.get("secure_url").and_then(|u| u.as_str()) {
-                                return Some(secure_url.to_string());
-                            }
+                if let Ok(res) = client.post(&upload_url).multipart(form).send().await {
+                    if let Ok(json) = res.json::<serde_json::Value>().await {
+                        if let Some(secure_url) = json.get("secure_url").and_then(|u| u.as_str()) {
+                            return Some(secure_url.to_string());
                         }
                     }
                 }
@@ -227,17 +227,18 @@ async fn handle_login(
         .unwrap_or(None);
 
     if let Some((stored_hash,)) = result {
-        let parsed_hash = PasswordHash::new(&stored_hash).unwrap();
-        if Argon2::default().verify_password(form.password.as_bytes(), &parsed_hash).is_ok() {
-            session.insert("admin_user", form.username).await.unwrap();
-            return Redirect::to("/admin").into_response();
+        if let Ok(parsed_hash) = PasswordHash::new(&stored_hash) {
+            if Argon2::default().verify_password(form.password.as_bytes(), &parsed_hash).is_ok() {
+                session.insert("admin_user", form.username).await.unwrap();
+                return Redirect::to("/admin").into_response();
+            }
         }
     }
     Redirect::to("/login?error=invalid_credentials").into_response()
 }
 
 async fn handle_logout(session: Session) -> Redirect {
-    session.purge().await.ok();
+    session.delete().await.ok();
     Redirect::to("/")
 }
 
