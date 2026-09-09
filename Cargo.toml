@@ -3,14 +3,15 @@ name = "news_platform_rust"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "news_platform_rust"
-path = "src/main.rs"
-
 [dependencies]
 axum = { version = "0.7", features = ["multipart"] }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 tera = "1.19"
-tower-http = { version = "0.5", features = ["fs"] }
+tower-http = { version = "0.5", features = ["fs", "cors"] }
+tower-sessions = "0.12"
 uuid = { version = "1.6", features = ["v4"] }
+sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "sqlite"] }
+argon2 = "0.5"
+reqwest = { version = "0.11", features = ["multipart", "json"] }
