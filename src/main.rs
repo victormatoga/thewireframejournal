@@ -19,14 +19,6 @@ pub struct AppState {
     pub tera: Tera,
 }
 
-#[derive(Serialize)]
-pub struct DashboardMetrics {
-    pub total_views: i64,
-    pub total_subscribers: i64,
-    pub total_revenue: f64,
-    pub total_clicks: i64,
-}
-
 #[derive(Serialize, sqlx::FromRow)]
 pub struct Article {
     pub id: i64,
@@ -51,6 +43,11 @@ pub struct DeleteArticleForm {
 }
 
 #[derive(Deserialize)]
+pub struct SubscribeForm {
+    pub email: String,
+}
+
+#[derive(Deserialize)]
 pub struct PasswordChangeForm {
     pub current_password: String,
     pub new_password: String,
@@ -66,6 +63,7 @@ pub struct AuthQuery {
 #[derive(Deserialize)]
 pub struct SearchQuery {
     pub q: Option<String>,
+    pub msg: Option<String>,
 }
 
 #[tokio::main]
@@ -87,6 +85,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             role TEXT DEFAULT 'super_admin'
+        );
+        CREATE TABLE IF NOT EXISTS subscribers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            subscribed_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );"
     ).execute(&pool).await?;
 
@@ -117,6 +120,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/", get(public_website_handler))
         .route("/category/:name", get(public_category_handler))
         .route("/search", get(public_search_handler))
+        .route("/subscribe", post(subscribe_handler))
         .route("/admin/dashboard", get(admin_dashboard_handler))
         .route("/admin/editor", get(editor_portal_handler))
         .route("/admin/reporter", get(reporter_portal_handler))
@@ -136,11 +140,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn get_categories() -> Vec<&'static str> {
     vec![
         "breaking news", "international", "sports", "healthy", "agriculture",
-        "weather", "climate", "politics", "games", "music", "legal", "markets", "business"
+        "weather", "climate", "politics", "games", "entertainment", "business"
     ]
 }
 
-async fn public_website_handler(State(state): State<AppState>) -> impl IntoResponse {
+async fn public_website_handler(
+    State(state): State<AppState>,
+    Query(params): Query<SearchQuery>,
+) -> impl IntoResponse {
     let articles = sqlx::query_as::<_, Article>("SELECT id, title, category, content, author_role FROM articles ORDER BY id DESC")
         .fetch_all(&state.pool)
         .await
@@ -151,6 +158,7 @@ async fn public_website_handler(State(state): State<AppState>) -> impl IntoRespo
     ctx.insert("articles", &articles);
     ctx.insert("active_category", "");
     ctx.insert("search_term", "");
+    if let Some(m) = params.msg { ctx.insert("msg", &m); }
 
     match state.tera.render("index.html", &ctx) {
         Ok(rendered) => Html(rendered).into_response(),
@@ -208,6 +216,21 @@ async fn public_search_handler(
     }
 }
 
+async fn subscribe_handler(
+    State(state): State<AppState>,
+    Form(form): Form<SubscribeForm>,
+) -> impl IntoResponse {
+    let result = sqlx::query("INSERT INTO subscribers (email) VALUES ($1)")
+        .bind(&form.email)
+        .execute(&state.pool)
+        .await;
+
+    match result {
+        Ok(_) => Redirect::to("/?msg=Thank+you+for+subscribing+to+The+WireFrame+Journal!"),
+        Err(_) => Redirect::to("/?msg=This+email+is+already+subscribed."),
+    }
+}
+
 async fn admin_dashboard_handler(
     State(state): State<AppState>,
     Query(params): Query<AuthQuery>,
@@ -217,15 +240,7 @@ async fn admin_dashboard_handler(
         .await
         .unwrap_or_default();
 
-    let metrics = DashboardMetrics {
-        total_views: 12450,
-        total_subscribers: 1820,
-        total_revenue: 3450.75,
-        total_clicks: 890,
-    };
-
     let mut ctx = tera::Context::new();
-    ctx.insert("metrics", &metrics);
     ctx.insert("articles", &articles);
     ctx.insert("categories", &get_categories());
     ctx.insert("user_role", "Super Admin");

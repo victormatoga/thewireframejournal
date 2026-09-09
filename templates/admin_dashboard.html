@@ -19,14 +19,11 @@
         
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: #1e293b; padding: 15px 20px; border-radius: 8px; }
         
-        /* Admin Search Bar with WJ Logo */
-        .admin-search-box { display: flex; align-items: center; background: #0f172a; border: 1px solid #334155; border-radius: 20px; padding: 4px 12px; }
-        .admin-search-box .wj-badge { background: #0284c7; color: #fff; font-weight: bold; font-size: 0.75rem; padding: 3px 6px; border-radius: 4px; margin-right: 8px; }
+        /* Admin Search Bar with Exact Public Website WJ Logo Styling */
+        .admin-search-box { display: flex; align-items: center; background: #0f172a; border: 1px solid #334155; border-radius: 20px; padding: 4px 10px; }
+        .admin-search-box .logo-box { background: #0284c7; color: #ffffff; font-weight: bold; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; margin-right: 8px; }
         .admin-search-box input { background: transparent; border: none; color: #fff; outline: none; font-size: 0.9rem; width: 220px; }
 
-        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .card { background: #1e293b; padding: 20px; border-radius: 8px; }
-        .card .value { font-size: 1.6rem; font-weight: bold; color: #38bdf8; margin-top: 5px; }
         .section-card { background: #1e293b; padding: 25px; border-radius: 8px; margin-bottom: 30px; }
         table { width: 100%; border-collapse: collapse; text-align: left; margin-top: 15px; }
         th, td { padding: 12px; border-bottom: 1px solid #334155; }
@@ -50,7 +47,7 @@
 
         <div class="nav-group">
             <h3>Overview</h3>
-            <a href="/admin/dashboard" class="nav-item active">Dashboard & Analytics</a>
+            <a href="/admin/dashboard" class="nav-item active">Dashboard Overview</a>
             <a href="#roles-guide" class="nav-item">Role Setup Guide</a>
             <a href="#articles" class="nav-item">Manage Articles</a>
             <a href="/" target="_blank" class="nav-item">View Website ↗</a>
@@ -68,19 +65,12 @@
         <header>
             <h2>Super Admin Portal</h2>
             <form action="/search" method="GET" class="admin-search-box">
-                <span class="wj-badge">WJ</span>
+                <div class="logo-box">WJ</div>
                 <input type="text" name="q" placeholder="Admin Article Search...">
             </form>
         </header>
 
         {% if msg %}<div style="background:#15803d; padding:10px; border-radius:6px; margin-bottom:15px;">{{ msg }}</div>{% endif %}
-
-        <div class="metrics-grid">
-            <div class="card"><div>Total Page Views</div><div class="value">{{ metrics.total_views }}</div></div>
-            <div class="card"><div>Subscribers</div><div class="value">{{ metrics.total_subscribers }}</div></div>
-            <div class="card"><div>Ad Revenue</div><div class="value">${{ metrics.total_revenue }}</div></div>
-            <div class="card"><div>Ad Clicks</div><div class="value">{{ metrics.total_clicks }}</div></div>
-        </div>
 
         <!-- Role Setup & Workflow Instructions -->
         <div class="section-card" id="roles-guide">
@@ -99,7 +89,7 @@
 
             <div class="guide-box" style="border-left-color: #ef4444;">
                 <h4>3. Super Admin Role (Governance & Security)</h4>
-                <p>Super Admins have unrestricted site access to manage articles across all roles, monitor ad performance, and update database master credentials.</p>
+                <p>Super Admins have unrestricted site access to manage articles across all roles, monitor content streams, and update database master credentials.</p>
             </div>
         </div>
 

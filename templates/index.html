@@ -6,26 +6,40 @@
     <title>The WireFrame Journal</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
-        header { background: #1e293b; padding: 20px 40px; border-bottom: 1px solid #334155; }
+        body { background-color: #ffffff; color: #0f172a; font-family: system-ui, -apple-system, sans-serif; }
+        
+        header { background: #ffffff; padding: 20px 40px; border-bottom: 1px solid #e2e8f0; }
         .header-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
         .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
-        .logo-box { background: #0284c7; color: #fff; font-weight: bold; padding: 8px 12px; border-radius: 6px; font-size: 1.2rem; }
-        .site-title { font-size: 1.8rem; font-weight: bold; color: #f8fafc; }
-        .search-box { display: flex; align-items: center; background: #0f172a; border: 1px solid #334155; border-radius: 20px; padding: 6px 14px; }
-        .search-box input { background: transparent; border: none; color: #fff; outline: none; font-size: 0.9rem; width: 200px; }
+        .logo-box { background: #0284c7; color: #ffffff; font-weight: bold; padding: 8px 12px; border-radius: 6px; font-size: 1.2rem; }
+        .site-title { font-size: 1.8rem; font-weight: bold; color: #0f172a; }
+        
+        .header-actions { display: flex; align-items: center; gap: 15px; }
+        .search-box { display: flex; align-items: center; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 20px; padding: 6px 14px; }
+        .search-box input { background: transparent; border: none; color: #0f172a; outline: none; font-size: 0.9rem; width: 180px; }
 
-        nav { background: #1e293b; padding: 12px 40px; border-bottom: 1px solid #334155; overflow-x: auto; white-space: nowrap; }
-        .nav-container { max-width: 1200px; margin: 0 auto; display: flex; gap: 15px; }
-        nav a { color: #cbd5e1; text-decoration: none; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 8px; border-radius: 4px; }
-        nav a:hover, nav a.active { background: #0284c7; color: #fff; }
+        nav { background: #f8fafc; padding: 12px 40px; border-bottom: 1px solid #e2e8f0; overflow-x: auto; white-space: nowrap; }
+        .nav-container { max-width: 1200px; margin: 0 auto; display: flex; gap: 12px; }
+        nav a { color: #475569; text-decoration: none; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 10px; border-radius: 4px; font-weight: 500; }
+        nav a:hover, nav a.active { background: #0284c7; color: #ffffff; }
 
         .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        
+        .subscribe-banner { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 25px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .subscribe-banner h3 { color: #0369a1; margin-bottom: 5px; }
+        .subscribe-banner p { color: #0284c7; font-size: 0.9rem; }
+        .subscribe-form { display: flex; gap: 10px; }
+        .subscribe-form input[type="email"] { padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; width: 260px; font-size: 0.9rem; }
+        .subscribe-form button { background: #0284c7; color: #ffffff; border: none; padding: 10px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .subscribe-form button:hover { background: #0369a1; }
+
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
-        .card { background: #1e293b; border-radius: 8px; padding: 20px; border: 1px solid #334155; }
-        .category { color: #38bdf8; font-size: 0.75rem; text-transform: uppercase; font-weight: bold; margin-bottom: 8px; }
-        .card h3 { font-size: 1.2rem; margin-bottom: 10px; color: #fff; }
-        .card p { color: #94a3b8; font-size: 0.9rem; line-height: 1.5; }
+        .card { background: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .category { color: #0284c7; font-size: 0.75rem; text-transform: uppercase; font-weight: bold; margin-bottom: 8px; }
+        .card h3 { font-size: 1.2rem; margin-bottom: 10px; color: #0f172a; }
+        .card p { color: #475569; font-size: 0.9rem; line-height: 1.5; }
+        
+        .alert-msg { background: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 12px; border-radius: 6px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -36,9 +50,11 @@
                 <div class="logo-box">WJ</div>
                 <h1 class="site-title">The WireFrame Journal</h1>
             </a>
-            <form action="/search" method="GET" class="search-box">
-                <input type="text" name="q" placeholder="Search news stories..." value="{% if search_term %}{{ search_term }}{% endif %}">
-            </form>
+            <div class="header-actions">
+                <form action="/search" method="GET" class="search-box">
+                    <input type="text" name="q" placeholder="Search news..." value="{% if search_term %}{{ search_term }}{% endif %}">
+                </form>
+            </div>
         </div>
     </header>
 
@@ -52,6 +68,22 @@
     </nav>
 
     <div class="container">
+        {% if msg %}
+            <div class="alert-msg">{{ msg }}</div>
+        {% endif %}
+
+        <!-- Interactive Subscriber Box -->
+        <div class="subscribe-banner">
+            <div>
+                <h3>Subscribe to The WireFrame Journal</h3>
+                <p>Get the latest breaking news and daily editorial coverage delivered straight to your inbox.</p>
+            </div>
+            <form action="/subscribe" method="POST" class="subscribe-form">
+                <input type="email" name="email" placeholder="Enter your email address..." required>
+                <button type="submit">Subscribe</button>
+            </form>
+        </div>
+
         {% if active_category and active_category != "" %}
             <h2>Category: {{ active_category | capitalize }}</h2>
         {% elif search_term and search_term != "" %}
