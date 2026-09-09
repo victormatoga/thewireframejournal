@@ -90,10 +90,11 @@ async fn main() {
         .nest_service("/uploads", ServeDir::new("uploads"))
         .with_state(shared_state);
 
-    let addr = "127.0.0.1:3000";
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    let addr = format!("0.0.0.0:{}", port);
     println!("Server running on http://{}", addr);
 
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
 
