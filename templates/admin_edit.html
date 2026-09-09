@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Story - Wireframe Journal Admin</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23dc2626'/><text x='50%' y='65%' font-size='55' font-weight='900' fill='white' font-family='sans-serif' text-anchor='middle'>WJ</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans text-gray-900 flex flex-col min-h-screen">
+
+    <header class="bg-slate-900 text-white p-4 shadow-md flex justify-between items-center max-w-full px-8">
+        <div class="flex items-center space-x-3">
+            <span class="bg-red-600 text-white font-black text-lg px-2.5 py-0.5 rounded tracking-tighter">WJ</span>
+            <h1 class="text-xl font-bold">Edit Story #{{ article.id }}</h1>
+        </div>
+        <a href="/admin" class="bg-slate-700 hover:bg-slate-600 text-sm font-semibold px-4 py-2 rounded transition">&larr; Back to Dashboard</a>
+    </header>
+
+    <main class="max-w-2xl mx-auto my-8 px-4 flex-grow w-full">
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <h2 class="text-lg font-bold mb-4 border-b pb-2 text-slate-800">Edit Story Details</h2>
+            
+            <!-- Note enctype="multipart/form-data" added below -->
+            <form action="/admin/edit/{{ article.id }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-600 mb-1">Title</label>
+                    <input type="text" name="title" value="{{ article.title }}" required class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-red-600 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-600 mb-1">Category</label>
+                    <select name="category" required class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-red-600 outline-none bg-white">
+                        <option value="Health" {% if article.category == "Health" %}selected{% endif %}>Health</option>
+                        <option value="Sports" {% if article.category == "Sports" %}selected{% endif %}>Sports</option>
+                        <option value="Entertainment" {% if article.category == "Entertainment" %}selected{% endif %}>Entertainment</option>
+                        <option value="Fashion & Design" {% if article.category == "Fashion & Design" %}selected{% endif %}>Fashion & Design</option>
+                        <option value="Agriculture" {% if article.category == "Agriculture" %}selected{% endif %}>Agriculture</option>
+                        <option value="Business" {% if article.category == "Business" %}selected{% endif %}>Business</option>
+                        <option value="Politics" {% if article.category == "Politics" %}selected{% endif %}>Politics</option>
+                        <option value="Travel" {% if article.category == "Travel" %}selected{% endif %}>Travel</option>
+                        <option value="Science" {% if article.category == "Science" %}selected{% endif %}>Science</option>
+                        <option value="Climate" {% if article.category == "Climate" %}selected{% endif %}>Climate</option>
+                        <option value="Weather" {% if article.category == "Weather" %}selected{% endif %}>Weather</option>
+                        <option value="Games" {% if article.category == "Games" %}selected{% endif %}>Games</option>
+                        <option value="Music" {% if article.category == "Music" %}selected{% endif %}>Music</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-600 mb-1">Author</label>
+                    <input type="text" name="author" value="{{ article.author }}" required class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-red-600 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-600 mb-1">Replace Picture (Optional)</label>
+                    <input type="file" name="image_file" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 border rounded p-1">
+                    {% if article.image_url %}
+                        <p class="text-xs text-gray-400 mt-1">Current Image: <a href="{{ article.image_url }}" target="_blank" class="text-blue-500 underline">View</a></p>
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-600 mb-1">Replace Video (Optional)</label>
+                    <input type="file" name="video_file" accept="video/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 border rounded p-1">
+                    {% if article.video_url %}
+                        <p class="text-xs text-gray-400 mt-1">Current Video: <a href="{{ article.video_url }}" target="_blank" class="text-blue-500 underline">View</a></p>
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-600 mb-1">Story Content</label>
+                    <textarea name="content" rows="6" required class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-red-600 outline-none">{{ article.content }}</textarea>
+                </div>
+                <div class="flex space-x-3 pt-2">
+                    <button type="submit" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded transition">Save Changes</button>
+                    <a href="/admin" class="flex-1 text-center bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 rounded transition">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </main>
+
+</body>
+</html>
