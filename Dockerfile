@@ -13,9 +13,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY --from=builder /app/target/release/news_platform_rust /app/
-COPY --from=builder /app/templates /app/templates
-COPY --from=builder /app/init_db.sql /app/
+COPY --from=builder /app/target/release/news_platform_rust ./
+COPY --from=builder /app/templates ./templates
+COPY --from=builder /app/init_db.sql ./
 
 EXPOSE 3000
 CMD ["./news_platform_rust"]
