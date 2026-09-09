@@ -3,237 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }} - Wireframe Journal</title>
-    
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23dc2626'/><text x='50%' y='65%' font-size='55' font-weight='900' fill='white' font-family='sans-serif' text-anchor='middle'>WJ</text></svg>">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <style>[x-cloak] { display: none !important; }</style>
+    <title>The WireFrame Journal</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+        header { background: #1e293b; padding: 20px 40px; border-bottom: 1px solid #334155; }
+        .header-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .logo-box { background: #0284c7; color: #fff; font-weight: bold; padding: 8px 12px; border-radius: 6px; font-size: 1.2rem; }
+        .site-title { font-size: 1.8rem; font-weight: bold; color: #f8fafc; }
+        .search-box { display: flex; align-items: center; background: #0f172a; border: 1px solid #334155; border-radius: 20px; padding: 6px 14px; }
+        .search-box input { background: transparent; border: none; color: #fff; outline: none; font-size: 0.9rem; width: 180px; }
+
+        nav { background: #1e293b; padding: 12px 40px; border-bottom: 1px solid #334155; overflow-x: auto; white-space: nowrap; }
+        .nav-container { max-width: 1200px; margin: 0 auto; display: flex; gap: 15px; }
+        nav a { color: #cbd5e1; text-decoration: none; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 8px; border-radius: 4px; }
+        nav a:hover, nav a.active { background: #0284c7; color: #fff; }
+
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+        .card { background: #1e293b; border-radius: 8px; padding: 20px; border: 1px solid #334155; }
+        .category { color: #38bdf8; font-size: 0.75rem; text-transform: uppercase; font-weight: bold; margin-bottom: 8px; }
+        .card h3 { font-size: 1.2rem; margin-bottom: 10px; color: #fff; }
+        .card p { color: #94a3b8; font-size: 0.9rem; line-height: 1.5; }
+        .portal-link { display: inline-block; margin-top: 20px; color: #38bdf8; text-decoration: none; font-size: 0.9rem; }
+    </style>
 </head>
-<body class="bg-gray-100 font-sans text-gray-900 flex flex-col min-h-screen" x-data="{ openDrawer: false, openMore: false, openSubscribe: false, searchQuery: '' }">
+<body>
 
-    <!-- Success Toast Alert -->
-    {% if subscribed_success %}
-    <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)" class="fixed bottom-5 right-5 bg-green-600 text-white px-5 py-3 rounded-lg shadow-xl z-50 flex items-center space-x-3">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-        <span class="font-bold text-sm">Thank you for subscribing! You will receive updates on new stories.</span>
-        <button @click="show = false" class="ml-4 font-bold text-lg">&times;</button>
-    </div>
-    {% endif %}
-
-    <!-- Subscribe Modal -->
-    <div x-show="openSubscribe" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" x-cloak>
-        <div @click.away="openSubscribe = false" class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 relative">
-            <button @click="openSubscribe = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
-            
-            <div class="flex items-center space-x-2 mb-3">
-                <span class="bg-red-600 text-white font-black text-sm px-2 py-0.5 rounded">WJ</span>
-                <h3 class="text-xl font-black text-gray-900">Subscribe for Updates</h3>
-            </div>
-            <p class="text-xs text-gray-600 mb-5">Get instant notifications directly to your email whenever our editorial team publishes or updates breaking news stories.</p>
-            
-            <form action="/subscribe" method="POST" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Your Name (Optional)</label>
-                    <input type="text" name="name" placeholder="John Doe" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-red-600 outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Email Address</label>
-                    <input type="email" name="email" required placeholder="name@example.com" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-red-600 outline-none">
-                </div>
-                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg shadow transition">
-                    Confirm Subscription
-                </button>
+    <header>
+        <div class="header-container">
+            <a href="/" class="brand">
+                <div class="logo-box">WJ</div>
+                <h1 class="site-title">The WireFrame Journal</h1>
+            </a>
+            <form action="/search" method="GET" class="search-box">
+                <input type="text" name="q" placeholder="Search news..." value="{{ search_term | default(value='') }}">
             </form>
         </div>
-    </div>
-
-    <!-- Overlay Backdrop -->
-    <div x-show="openDrawer" @click="openDrawer = false" class="fixed inset-0 bg-black/60 z-40 transition-opacity" x-cloak></div>
-
-    <!-- Side Drawer Navigation -->
-    <aside x-show="openDrawer" 
-           x-transition:enter="transition transform ease-out duration-300"
-           x-transition:enter-start="-translate-x-full"
-           x-transition:enter-end="translate-x-0"
-           x-transition:leave="transition transform ease-in duration-200"
-           x-transition:leave-start="translate-x-0"
-           x-transition:leave-end="-translate-x-full"
-           class="fixed top-0 left-0 w-80 h-full bg-slate-900 text-white z-50 p-6 overflow-y-auto shadow-2xl" x-cloak>
-        
-        <div class="flex justify-between items-center pb-6 border-b border-slate-700">
-            <div class="flex items-center space-x-2">
-                <span class="bg-red-600 text-white font-black text-sm px-2 py-1 rounded tracking-tighter">WJ</span>
-                <span class="text-xl font-bold text-white tracking-wide">Menu</span>
-            </div>
-            <button @click="openDrawer = false" class="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
-        </div>
-
-        <nav class="mt-6 flex flex-col space-y-4 font-semibold text-gray-200">
-            <a href="/" class="hover:text-red-500 transition">Main Page</a>
-            <a href="/category/Health" class="hover:text-red-500 transition">Health</a>
-            <a href="/category/Sports" class="hover:text-red-500 transition">Sports</a>
-            <a href="/category/Entertainment" class="hover:text-red-500 transition">Entertainment</a>
-            <a href="/category/Fashion & Design" class="hover:text-red-500 transition">Fashion & Design</a>
-            <a href="/category/Agriculture" class="hover:text-red-500 transition">Agriculture</a>
-            <a href="/category/Business" class="hover:text-red-500 transition">Business</a>
-            <a href="/category/Politics" class="hover:text-red-500 transition">Politics</a>
-            <a href="/category/Travel" class="hover:text-red-500 transition">Travel</a>
-            
-            <div class="pt-4 border-t border-slate-700">
-                <span class="text-xs uppercase font-bold text-gray-400 tracking-wider">More Topics</span>
-                <div class="mt-3 flex flex-col space-y-3 pl-2 border-l-2 border-red-600">
-                    <a href="/category/Science" class="hover:text-red-500 text-sm transition">Science</a>
-                    <a href="/category/Climate" class="hover:text-red-500 text-sm transition">Climate</a>
-                    <a href="/category/Weather" class="hover:text-red-500 text-sm transition">Weather</a>
-                    <a href="/category/Games" class="hover:text-red-500 text-sm transition">Games</a>
-                    <a href="/category/Music" class="hover:text-red-500 text-sm transition">Music</a>
-                </div>
-            </div>
-        </nav>
-    </aside>
-
-    <!-- Top Header -->
-    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4 border-b border-slate-800">
-            
-            <div class="flex items-center space-x-3 cursor-pointer" @click="openDrawer = true">
-                <button class="p-1 focus:outline-none">
-                    <svg class="w-7 h-7 text-white hover:text-red-500 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                    </svg>
-                </button>
-                <div class="flex items-center space-x-2">
-                    <span class="bg-red-600 text-white font-black text-lg px-2.5 py-0.5 rounded tracking-tighter shadow">WJ</span>
-                    <h1 class="text-2xl md:text-3xl font-black tracking-tight hover:opacity-90">Wireframe Journal</h1>
-                </div>
-            </div>
-
-            <!-- Search Bar -->
-            <form action="/search" method="GET" class="relative w-full md:w-80">
-                <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                    <span class="bg-red-600 text-white font-black text-xs px-1.5 py-0.5 rounded tracking-tighter shadow">WJ</span>
-                </div>
-                <input type="text" name="q" x-model="searchQuery" placeholder="Search Wireframe Journal..." 
-                       class="w-full bg-slate-800 text-white text-sm pl-12 pr-10 py-2 rounded-lg border border-slate-700 focus:outline-none focus:border-red-600 focus general-transition placeholder-gray-400">
-                <button type="submit" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                </button>
-            </form>
-        </div>
-
-        <!-- Category Navigation Bar with Subscribe Red Button on Right -->
-        <nav class="bg-slate-800 text-sm font-semibold border-b border-slate-700">
-            <div class="max-w-7xl mx-auto px-4 flex justify-between items-center py-2.5">
-                
-                <div class="flex space-x-6 whitespace-nowrap overflow-x-auto items-center pr-4">
-                    <a href="/" class="hover:text-red-400 transition">Main Page</a>
-                    <a href="/category/Health" class="hover:text-red-400 transition">Health</a>
-                    <a href="/category/Sports" class="hover:text-red-400 transition">Sports</a>
-                    <a href="/category/Entertainment" class="hover:text-red-400 transition">Entertainment</a>
-                    <a href="/category/Fashion & Design" class="hover:text-red-400 transition">Fashion & Design</a>
-                    <a href="/category/Agriculture" class="hover:text-red-400 transition">Agriculture</a>
-                    <a href="/category/Business" class="hover:text-red-400 transition">Business</a>
-                    <a href="/category/Politics" class="hover:text-red-400 transition">Politics</a>
-                    <a href="/category/Travel" class="hover:text-red-400 transition">Travel</a>
-
-                    <div class="relative inline-block text-left" @click.away="openMore = false">
-                        <button @click="openMore = !openMore" class="flex items-center space-x-1 hover:text-red-400 font-bold focus:outline-none py-1 px-2 rounded hover:bg-slate-700 transition">
-                            <span>More</span>
-                            <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': openMore }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </button>
-                        
-                        <div x-show="openMore" 
-                             x-transition:enter="transition ease-out duration-150"
-                             x-transition:enter-start="transform opacity-0 scale-95 -translate-y-2"
-                             x-transition:enter-end="transform opacity-100 scale-100 translate-y-0"
-                             x-transition:leave="transition ease-in duration-100"
-                             x-transition:leave-start="transform opacity-100 scale-100 translate-y-0"
-                             x-transition:leave-end="transform opacity-0 scale-95 -translate-y-2"
-                             class="absolute right-0 mt-2 w-44 bg-slate-900 border border-slate-700 rounded-lg shadow-xl py-2 z-50" x-cloak>
-                            
-                            <a href="/category/Science" class="block px-4 py-2 text-sm text-gray-200 hover:bg-red-600 hover:text-white font-medium transition">Science</a>
-                            <a href="/category/Climate" class="block px-4 py-2 text-sm text-gray-200 hover:bg-red-600 hover:text-white font-medium transition">Climate</a>
-                            <a href="/category/Weather" class="block px-4 py-2 text-sm text-gray-200 hover:bg-red-600 hover:text-white font-medium transition">Weather</a>
-                            <a href="/category/Games" class="block px-4 py-2 text-sm text-gray-200 hover:bg-red-600 hover:text-white font-medium transition">Games</a>
-                            <a href="/category/Music" class="block px-4 py-2 text-sm text-gray-200 hover:bg-red-600 hover:text-white font-medium transition">Music</a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Red Subscribe Button on Far Right -->
-                <button @click="openSubscribe = true" class="bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider px-4 py-1.5 rounded-full shadow-md transition flex items-center space-x-1.5 shrink-0">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-                    <span>Subscribe</span>
-                </button>
-
-            </div>
-        </nav>
     </header>
 
-    <main class="max-w-7xl mx-auto mt-8 px-4 flex-grow w-full">
-        <h2 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">{{ active_category | default(value="Latest News") }}</h2>
-        <div class="grid md:grid-cols-3 gap-6 mb-12">
-            {% for article in articles %}
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition flex flex-col justify-between overflow-hidden">
-                
-                {% if article.video_url %}
-                    <div class="w-full h-48 bg-black">
-                        <video controls preload="metadata" class="w-full h-full object-cover">
-                            <source src="{{ article.video_url }}">
-                            Your browser does not support the video tag.
-                        </video>
-                    </div>
-                {% elif article.image_url %}
-                    <div class="w-full h-48 bg-gray-100 overflow-hidden">
-                        <img src="{{ article.image_url }}" alt="{{ article.title }}" class="w-full h-full object-cover hover:scale-105 transition duration-300">
-                    </div>
-                {% endif %}
-
-                <div class="p-6 flex-grow flex flex-col justify-between">
-                    <div>
-                        <span class="text-xs font-bold uppercase tracking-wider text-red-600">{{ article.category }}</span>
-                        <h3 class="text-xl font-bold mt-1 mb-2 hover:text-red-600">
-                            <a href="/article/{{ article.id }}">{{ article.title }}</a>
-                        </h3>
-                        <p class="text-gray-600 text-sm mb-4 line-clamp-3">{{ article.content }}</p>
-                    </div>
-                    <div class="flex justify-between items-center text-xs text-gray-500 pt-4 border-t">
-                        <span>By {{ article.author }}</span>
-                        <a href="/article/{{ article.id }}" class="text-red-600 font-semibold hover:underline">Read Story &rarr;</a>
-                    </div>
-                </div>
-            </div>
-            {% else %}
-            <div class="col-span-3 bg-white p-8 rounded-lg text-center text-gray-500">
-                No stories available right now.
-            </div>
+    <nav>
+        <div class="nav-container">
+            <a href="/" class="{% if not active_category %}active{% endif %}">All News</a>
+            {% for cat in categories %}
+            <a href="/category/{{ cat }}" class="{% if active_category == cat %}active{% endif %}">{{ cat }}</a>
             {% endfor %}
         </div>
-    </main>
+    </nav>
 
-    <footer class="bg-slate-900 text-gray-300 border-t border-slate-800 mt-auto py-8">
-        <div class="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
-            <div class="flex items-center space-x-2">
-                <span class="bg-red-600 text-white font-black text-base px-2 py-0.5 rounded tracking-tighter">WJ</span>
-                <span class="text-lg font-bold text-white">Wireframe Journal</span>
+    <div class="container">
+        {% if active_category %}
+            <h2>Category: {{ active_category | capitalize }}</h2>
+        {% elif search_term %}
+            <h2>Search Results for "{{ search_term }}"</h2>
+        {% else %}
+            <h2>Latest News Stories</h2>
+        {% endif %}
+
+        <div class="grid">
+            {% for article in articles %}
+            <div class="card">
+                <div class="category">{{ article.category }}</div>
+                <h3>{{ article.title }}</h3>
+                <p>{{ article.content }}</p>
             </div>
-            <div class="text-sm space-y-1">
-                <p class="font-medium text-gray-200">Victor Matoga, P/Bag 0096, Lilongwe, Malawi</p>
-                <p class="text-gray-400">
-                    Phone: 
-                    <a href="tel:+265994687428" class="text-red-400 hover:underline">+265 994 687 428</a> / 
-                    <a href="tel:+265880978459" class="text-red-400 hover:underline">+265 880 978 459</a>
-                </p>
-                <p><a href="mailto:victormatoga67@gmail.com" class="text-red-400 hover:underline">victormatoga67@gmail.com</a></p>
-            </div>
-            <p class="text-xs text-gray-500">&copy; Wireframe Journal. All rights reserved.</p>
+            {% else %}
+            <p>No published news found in this category.</p>
+            {% endfor %}
         </div>
-    </footer>
+
+        <div style="margin-top: 40px; border-top: 1px solid #334155; padding-top: 20px;">
+            <a href="/admin/dashboard" class="portal-link">→ Access Super Admin Portal</a> | 
+            <a href="/admin/editor" class="portal-link">→ Access Editor Portal</a> | 
+            <a href="/admin/reporter" class="portal-link">→ Access Reporter Portal</a>
+        </div>
+    </div>
+
 </body>
 </html>

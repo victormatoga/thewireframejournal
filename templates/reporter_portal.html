@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>The WireFrame Journal - Reporter Portal</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { display: flex; min-height: 100vh; background-color: #0f172a; color: #f8fafc; }
+        .sidebar { width: 280px; background-color: #1e293b; padding: 20px; }
+        .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 30px; }
+        .logo-box { background: #0284c7; color: #fff; font-weight: bold; padding: 8px 12px; border-radius: 6px; }
+        .nav-item { display: block; padding: 10px; color: #cbd5e1; text-decoration: none; border-radius: 6px; margin-bottom: 5px; }
+        .main-content { flex: 1; padding: 30px; }
+        .section-card { background: #1e293b; padding: 25px; border-radius: 8px; margin-bottom: 30px; }
+        .form-control { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #fff; margin-bottom: 15px; }
+        .btn { padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer; background: #0284c7; color: #fff; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; border-bottom: 1px solid #334155; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="brand">
+            <div class="logo-box">WJ</div>
+            <div style="font-weight:bold; color:#38bdf8;">The WireFrame Journal</div>
+        </div>
+        <a href="/admin/reporter" class="nav-item active">Reporters Portal</a>
+        <a href="/" target="_blank" class="nav-item">View Website ↗</a>
+    </div>
+
+    <div class="main-content">
+        <h2>Reporter Story Submission Desk</h2>
+        <p style="color:#94a3b8; margin-bottom:20px;">Submit draft stories and articles directly to the editorial team for approval.</p>
+
+        {% if msg %}<div style="background:#15803d; padding:10px; border-radius:6px; margin-bottom:15px;">{{ msg }}</div>{% endif %}
+        {% if error %}<div style="background:#b91c1c; padding:10px; border-radius:6px; margin-bottom:15px;">{{ error }}</div>{% endif %}
+
+        <div class="section-card">
+            <h3>Submit New News Story</h3>
+            <form action="/admin/articles/create" method="POST" style="margin-top:15px;">
+                <input type="hidden" name="role" value="reporter">
+                <input type="text" name="title" placeholder="Story Headline" class="form-control" required>
+                <select name="category" class="form-control" required>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}">{{ cat | capitalize }}</option>
+                    {% endfor %}
+                </select>
+                <textarea name="content" placeholder="Full article draft..." class="form-control" rows="5" required></textarea>
+                <button type="submit" class="btn">Submit Draft to Editors</button>
+            </form>
+        </div>
+
+        <div class="section-card">
+            <h3>My Submissions</h3>
+            <table>
+                <thead>
+                    <tr><th>ID</th><th>Title</th><th>Category</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    {% for article in articles %}
+                    <tr>
+                        <td>{{ article.id }}</td>
+                        <td>{{ article.title }}</td>
+                        <td>{{ article.category }}</td>
+                        <td>Submitted / Under Review</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4">No drafts submitted yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</body>
+</html>

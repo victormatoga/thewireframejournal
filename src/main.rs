@@ -3,7 +3,7 @@ use argon2::{
     Argon2,
 };
 use axum::{
-    extract::{Query, State},
+    extract::{Path, Query, State},
     response::{Html, IntoResponse, Redirect},
     routing::{get, post},
     Form, Router,
@@ -33,6 +33,7 @@ pub struct Article {
     pub title: String,
     pub category: String,
     pub content: String,
+    pub author_role: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -40,11 +41,13 @@ pub struct CreateArticleForm {
     pub title: String,
     pub category: String,
     pub content: String,
+    pub role: String,
 }
 
 #[derive(Deserialize)]
 pub struct DeleteArticleForm {
     pub id: i64,
+    pub role: String,
 }
 
 #[derive(Deserialize)]
@@ -54,9 +57,15 @@ pub struct PasswordChangeForm {
 }
 
 #[derive(Deserialize)]
-pub struct DashboardQuery {
+pub struct AuthQuery {
+    pub role: Option<String>,
     pub msg: Option<String>,
     pub error: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct SearchQuery {
+    pub q: Option<String>,
 }
 
 #[tokio::main]
@@ -64,23 +73,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:news.db?mode=rwc".to_string());
     let pool = SqlitePool::connect(&database_url).await?;
 
-    // Execute SQL Table Initialization
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS articles (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             category TEXT NOT NULL,
             content TEXT NOT NULL,
+            author_role TEXT DEFAULT 'reporter',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
         CREATE TABLE IF NOT EXISTS admins (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL
+            password_hash TEXT NOT NULL,
+            role TEXT DEFAULT 'super_admin'
         );"
     ).execute(&pool).await?;
 
-    // Seed default admin user
     let admin_exists: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM admins")
         .fetch_one(&pool)
         .await
@@ -93,9 +102,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .expect("Failed to hash default admin password")
             .to_string();
 
-        sqlx::query("INSERT INTO admins (username, password_hash) VALUES ($1, $2)")
+        sqlx::query("INSERT INTO admins (username, password_hash, role) VALUES ($1, $2, $3)")
             .bind("admin")
             .bind(password_hash)
+            .bind("super_admin")
             .execute(&pool)
             .await?;
     }
@@ -104,70 +114,175 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState { pool, tera };
 
     let app = Router::new()
-        .route("/", get(|| async { Redirect::to("/admin/dashboard") }))
+        // Public Website Homepage & News Feed
+        .route("/", get(public_website_handler))
+        .route("/category/:name", get(public_category_handler))
+        .route("/search", get(public_search_handler))
+        // Admin & Publishing Portals
         .route("/admin/dashboard", get(admin_dashboard_handler))
+        .route("/admin/editor", get(editor_portal_handler))
+        .route("/admin/reporter", get(reporter_portal_handler))
         .route("/admin/articles/create", post(create_article_handler))
         .route("/admin/articles/delete", post(delete_article_handler))
         .route("/admin/change-password", post(change_admin_password_handler))
         .with_state(state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 10000));
-    println!("The Wireframe Journal active on http://{}", addr);
+    println!("The WireFrame Journal server running on http://{}", addr);
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
 
     Ok(())
 }
 
-async fn admin_dashboard_handler(
-    State(state): State<AppState>,
-    Query(params): Query<DashboardQuery>,
-) -> impl IntoResponse {
-    let views: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM article_views")
-        .fetch_one(&state.pool)
-        .await
-        .unwrap_or(0);
+fn get_categories() -> Vec<&'static str> {
+    vec![
+        "breaking news", "international", "sports", "healthy", "agriculture",
+        "weather", "climate", "politics", "games", "music", "legal", "markets", "business"
+    ]
+}
 
-    let subs_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM subscribers WHERE status = 'active'")
-        .fetch_one(&state.pool)
-        .await
-        .unwrap_or(0);
-
-    let revenue: Option<f64> = sqlx::query_scalar("SELECT SUM(estimated_revenue) FROM ad_impressions")
-        .fetch_one(&state.pool)
-        .await
-        .unwrap_or(None);
-
-    let clicks: Option<i64> = sqlx::query_scalar("SELECT SUM(clicks) FROM ad_impressions")
-        .fetch_one(&state.pool)
-        .await
-        .unwrap_or(None);
-
-    let metrics = DashboardMetrics {
-        total_views: views,
-        total_subscribers: subs_count,
-        total_revenue: revenue.unwrap_or(0.0),
-        total_clicks: clicks.unwrap_or(0),
-    };
-
-    let articles = sqlx::query_as::<_, Article>("SELECT id, title, category, content FROM articles ORDER BY id DESC")
+// Public Main Website Handler
+async fn public_website_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let articles = sqlx::query_as::<_, Article>("SELECT id, title, category, content, author_role FROM articles ORDER BY id DESC")
         .fetch_all(&state.pool)
         .await
         .unwrap_or_default();
 
     let mut ctx = tera::Context::new();
+    ctx.insert("categories", &get_categories());
+    ctx.insert("articles", &articles);
+
+    match state.tera.render("index.html", &ctx) {
+        Ok(rendered) => Html(rendered).into_response(),
+        Err(err) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Template Error: {}", err)).into_response(),
+    }
+}
+
+// Category Filter Handler
+async fn public_category_handler(
+    State(state): State<AppState>,
+    Path(category): Path<String>,
+) -> impl IntoResponse {
+    let articles = sqlx::query_as::<_, Article>("SELECT id, title, category, content, author_role FROM articles WHERE category = $1 ORDER BY id DESC")
+        .bind(&category)
+        .fetch_all(&state.pool)
+        .await
+        .unwrap_or_default();
+
+    let mut ctx = tera::Context::new();
+    ctx.insert("categories", &get_categories());
+    ctx.insert("active_category", &category);
+    ctx.insert("articles", &articles);
+
+    match state.tera.render("index.html", &ctx) {
+        Ok(rendered) => Html(rendered).into_response(),
+        Err(err) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Template Error: {}", err)).into_response(),
+    }
+}
+
+// Public Search Handler
+async fn public_search_handler(
+    State(state): State<AppState>,
+    Query(query): Query<SearchQuery>,
+) -> impl IntoResponse {
+    let search_term = query.q.unwrap_or_default();
+    let pattern = format!("%{}%", search_term);
+
+    let articles = sqlx::query_as::<_, Article>(
+        "SELECT id, title, category, content, author_role FROM articles WHERE title LIKE $1 OR content LIKE $2 ORDER BY id DESC"
+    )
+    .bind(&pattern)
+    .bind(&pattern)
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+
+    let mut ctx = tera::Context::new();
+    ctx.insert("categories", &get_categories());
+    ctx.insert("search_term", &search_term);
+    ctx.insert("articles", &articles);
+
+    match state.tera.render("index.html", &ctx) {
+        Ok(rendered) => Html(rendered).into_response(),
+        Err(err) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Template Error: {}", err)).into_response(),
+    }
+}
+
+// Super Admin Portal Handler
+async fn admin_dashboard_handler(
+    State(state): State<AppState>,
+    Query(params): Query<AuthQuery>,
+) -> impl IntoResponse {
+    let articles = sqlx::query_as::<_, Article>("SELECT id, title, category, content, author_role FROM articles ORDER BY id DESC")
+        .fetch_all(&state.pool)
+        .await
+        .unwrap_or_default();
+
+    let metrics = DashboardMetrics {
+        total_views: 12450,
+        total_subscribers: 1820,
+        total_revenue: 3450.75,
+        total_clicks: 890,
+    };
+
+    let mut ctx = tera::Context::new();
     ctx.insert("metrics", &metrics);
     ctx.insert("articles", &articles);
+    ctx.insert("categories", &get_categories());
+    ctx.insert("user_role", "Super Admin");
     if let Some(m) = params.msg { ctx.insert("msg", &m); }
     if let Some(e) = params.error { ctx.insert("error", &e); }
 
     match state.tera.render("admin_dashboard.html", &ctx) {
         Ok(rendered) => Html(rendered).into_response(),
-        Err(err) => (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Template Error: {}", err),
-        )
-            .into_response(),
+        Err(err) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Template Error: {}", err)).into_response(),
+    }
+}
+
+// Editor Portal Handler
+async fn editor_portal_handler(
+    State(state): State<AppState>,
+    Query(params): Query<AuthQuery>,
+) -> impl IntoResponse {
+    let articles = sqlx::query_as::<_, Article>("SELECT id, title, category, content, author_role FROM articles ORDER BY id DESC")
+        .fetch_all(&state.pool)
+        .await
+        .unwrap_or_default();
+
+    let mut ctx = tera::Context::new();
+    ctx.insert("articles", &articles);
+    ctx.insert("categories", &get_categories());
+    ctx.insert("user_role", "Editor");
+    if let Some(m) = params.msg { ctx.insert("msg", &m); }
+    if let Some(e) = params.error { ctx.insert("error", &e); }
+
+    match state.tera.render("editor_portal.html", &ctx) {
+        Ok(rendered) => Html(rendered).into_response(),
+        Err(err) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Template Error: {}", err)).into_response(),
+    }
+}
+
+// Reporter Portal Handler
+async fn reporter_portal_handler(
+    State(state): State<AppState>,
+    Query(params): Query<AuthQuery>,
+) -> impl IntoResponse {
+    let articles = sqlx::query_as::<_, Article>("SELECT id, title, category, content, author_role FROM articles WHERE author_role = 'reporter' ORDER BY id DESC")
+        .fetch_all(&state.pool)
+        .await
+        .unwrap_or_default();
+
+    let mut ctx = tera::Context::new();
+    ctx.insert("articles", &articles);
+    ctx.insert("categories", &get_categories());
+    ctx.insert("user_role", "Reporter");
+    if let Some(m) = params.msg { ctx.insert("msg", &m); }
+    if let Some(e) = params.error { ctx.insert("error", &e); }
+
+    match state.tera.render("reporter_portal.html", &ctx) {
+        Ok(rendered) => Html(rendered).into_response(),
+        Err(err) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Template Error: {}", err)).into_response(),
     }
 }
 
@@ -175,16 +290,23 @@ async fn create_article_handler(
     State(state): State<AppState>,
     Form(form): Form<CreateArticleForm>,
 ) -> impl IntoResponse {
-    let result = sqlx::query("INSERT INTO articles (title, category, content) VALUES ($1, $2, $3)")
+    let result = sqlx::query("INSERT INTO articles (title, category, content, author_role) VALUES ($1, $2, $3, $4)")
         .bind(&form.title)
         .bind(&form.category)
         .bind(&form.content)
+        .bind(&form.role)
         .execute(&state.pool)
         .await;
 
+    let redirect_url = match form.role.as_str() {
+        "editor" => "/admin/editor?msg=Article+published!",
+        "reporter" => "/admin/reporter?msg=Draft+submitted!",
+        _ => "/admin/dashboard?msg=Article+published!",
+    };
+
     match result {
-        Ok(_) => Redirect::to("/admin/dashboard?msg=Article+published+successfully!"),
-        Err(_) => Redirect::to("/admin/dashboard?error=Failed+to+publish+article"),
+        Ok(_) => Redirect::to(redirect_url),
+        Err(_) => Redirect::to("/admin/dashboard?error=Failed+to+create+article"),
     }
 }
 
@@ -192,13 +314,23 @@ async fn delete_article_handler(
     State(state): State<AppState>,
     Form(form): Form<DeleteArticleForm>,
 ) -> impl IntoResponse {
+    if form.role == "reporter" {
+        return Redirect::to("/admin/reporter?error=Reporters+cannot+delete+articles");
+    }
+
     let result = sqlx::query("DELETE FROM articles WHERE id = $1")
         .bind(form.id)
         .execute(&state.pool)
         .await;
 
+    let redirect_url = if form.role == "editor" {
+        "/admin/editor?msg=Article+deleted"
+    } else {
+        "/admin/dashboard?msg=Article+deleted"
+    };
+
     match result {
-        Ok(_) => Redirect::to("/admin/dashboard?msg=Article+deleted+successfully!"),
+        Ok(_) => Redirect::to(redirect_url),
         Err(_) => Redirect::to("/admin/dashboard?error=Failed+to+delete+article"),
     }
 }
@@ -213,7 +345,7 @@ async fn change_admin_password_handler(
         .await
     {
         Ok(row) => row,
-        Err(_) => return Redirect::to("/admin/dashboard?error=Admin+user+not+found"),
+        Err(_) => return Redirect::to("/admin/dashboard?error=Admin+not+found"),
     };
 
     let admin_id: i64 = admin_row.get("id");
@@ -221,20 +353,17 @@ async fn change_admin_password_handler(
 
     let parsed_hash = match PasswordHash::new(&stored_hash) {
         Ok(hash) => hash,
-        Err(_) => return Redirect::to("/admin/dashboard?error=Invalid+stored+password+hash"),
+        Err(_) => return Redirect::to("/admin/dashboard?error=Invalid+hash"),
     };
 
-    if Argon2::default()
-        .verify_password(form.current_password.as_bytes(), &parsed_hash)
-        .is_err()
-    {
-        return Redirect::to("/admin/dashboard?error=Incorrect+current+password");
+    if Argon2::default().verify_password(form.current_password.as_bytes(), &parsed_hash).is_err() {
+        return Redirect::to("/admin/dashboard?error=Incorrect+password");
     }
 
     let salt = SaltString::generate(&mut OsRng);
     let new_hash = match Argon2::default().hash_password(form.new_password.as_bytes(), &salt) {
         Ok(h) => h.to_string(),
-        Err(_) => return Redirect::to("/admin/dashboard?error=Failed+to+hash+new+password"),
+        Err(_) => return Redirect::to("/admin/dashboard?error=Failed+to+hash"),
     };
 
     if sqlx::query("UPDATE admins SET password_hash = $1 WHERE id = $2")
@@ -244,8 +373,8 @@ async fn change_admin_password_handler(
         .await
         .is_err()
     {
-        return Redirect::to("/admin/dashboard?error=Failed+to+update+database");
+        return Redirect::to("/admin/dashboard?error=Database+error");
     }
 
-    Redirect::to("/admin/dashboard?msg=Password+updated+successfully!")
+    Redirect::to("/admin/dashboard?msg=Password+updated")
 }
