@@ -9,7 +9,7 @@ use axum::{
     Form, Router,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
+use sqlx::{Row, SqlitePool};
 use std::net::SocketAddr;
 use tera::Tera;
 
@@ -59,7 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     sqlx::query(&schema).execute(&pool).await?;
 
     // Seed default admin user if missing (default: admin / adminpassword)
-    let admin_exists = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM admins")
+    let admin_exists: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM admins")
         .fetch_one(&pool)
         .await
         .unwrap_or(0);
@@ -71,13 +71,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .expect("Failed to hash default admin password")
             .to_string();
 
-        sqlx::query!(
-            "INSERT INTO admins (username, password_hash) VALUES ($1, $2)",
-            "admin",
-            password_hash
-        )
-        .execute(&pool)
-        .await?;
+        sqlx::query("INSERT INTO admins (username, password_hash) VALUES ($1, $2)")
+            .bind("admin")
+            .bind(password_hash)
+            .execute(&pool)
+            .await?;
     }
 
     // Initialize Tera Templates
@@ -158,17 +156,21 @@ async fn change_admin_password_handler(
     State(state): State<AppState>,
     Form(form): Form<PasswordChangeForm>,
 ) -> impl IntoResponse {
-    // 1. Fetch current admin row from database
-    let admin = match sqlx::query!("SELECT id, password_hash FROM admins WHERE username = 'admin'")
+    // 1. Fetch current admin row from database using runtime query
+    let admin_row = match sqlx::query("SELECT id, password_hash FROM admins WHERE username = $1")
+        .bind("admin")
         .fetch_one(&state.pool)
         .await
     {
-        Ok(rec) => rec,
+        Ok(row) => row,
         Err(_) => return Redirect::to("/admin/dashboard?error=Admin+user+not+found"),
     };
 
+    let admin_id: i64 = admin_row.get("id");
+    let stored_hash: String = admin_row.get("password_hash");
+
     // 2. Parse current stored hash and verify current password
-    let parsed_hash = match PasswordHash::new(&admin.password_hash) {
+    let parsed_hash = match PasswordHash::new(&stored_hash) {
         Ok(hash) => hash,
         Err(_) => return Redirect::to("/admin/dashboard?error=Invalid+stored+password+hash"),
     };
@@ -188,14 +190,12 @@ async fn change_admin_password_handler(
     };
 
     // 4. Store updated hash into SQLite
-    if sqlx::query!(
-        "UPDATE admins SET password_hash = $1 WHERE id = $2",
-        new_hash,
-        admin.id
-    )
-    .execute(&state.pool)
-    .await
-    .is_err()
+    if sqlx::query("UPDATE admins SET password_hash = $1 WHERE id = $2")
+        .bind(new_hash)
+        .bind(admin_id)
+        .execute(&state.pool)
+        .await
+        .is_err()
     {
         return Redirect::to("/admin/dashboard?error=Failed+to+update+database");
     }
