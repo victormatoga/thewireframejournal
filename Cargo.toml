@@ -3,10 +3,6 @@ name = "news_platform_rust"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "news_platform_rust"
-path = "src/main.rs"
-
 [dependencies]
 axum = { version = "0.7", features = ["multipart"] }
 tokio = { version = "1.0", features = ["full"] }
